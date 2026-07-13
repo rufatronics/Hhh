@@ -6,6 +6,7 @@ plugins {
 android {
     namespace 'com.aga.tinol'
     compileSdk 34
+    ndkVersion "25.2.9519653"
 
     defaultConfig {
         applicationId "com.aga.tinol"
@@ -19,7 +20,7 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags "-std=c++17"
-                arguments "-DANDROID_STL=c++_shared"
+                arguments "-DANDROID_STL=c++_shared", "-DLLAMA_BUILD_EXAMPLES=OFF", "-DLLAMA_BUILD_TESTS=OFF", "-DLLAMA_BUILD_SERVER=OFF", "-DLLAMA_BUILD_BENCHMARKS=OFF"
             }
         }
 
