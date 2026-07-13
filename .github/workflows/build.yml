@@ -1,0 +1,70 @@
+name: Android CI (build)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: sdkmanager "ndk;25.2.9519653" "cmake;3.22.1"
+
+      - name: Clone PrismML Llama runtime
+        run: |
+          git clone --depth 1 -b prism https://github.com/PrismML-Eng/llama.cpp.git
+
+      - name: Download Bonsai model and tokenizer
+        run: |
+          chmod +x scripts/download_model.sh
+          ./scripts/download_model.sh
+
+      - name: Build native libraries (arm64)
+        run: |
+          chmod +x scripts/build_runtime.sh
+          ./scripts/build_runtime.sh arm64
+
+      - name: Build native libraries (armeabi-v7a)
+        run: |
+          ./scripts/build_runtime.sh arm32 || echo "ARMv7 build failed, continuing..."
+
+      - name: Copy assets into project
+        run: |
+          chmod +x scripts/package_assets.sh
+          ./scripts/package_assets.sh
+
+      - name: Build APKs (Debug and Release)
+        run: ./gradlew assembleDebug assembleRelease
+
+      - name: Archive native libs
+        run: |
+          mkdir -p artifacts/libs
+          cp -r app/src/main/jniLibs/* artifacts/libs/
+          cd artifacts && zip -r native-libs.zip libs/
+
+      - name: Generate checksums
+        run: |
+          sha256sum app/build/outputs/apk/debug/app-debug.apk >> checksums.txt
+          sha256sum app/build/outputs/apk/release/app-release.apk >> checksums.txt
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tinol-build
+          path: |
+            app/build/outputs/apk/
+            checksums.txt
+            artifacts/native-libs.zip

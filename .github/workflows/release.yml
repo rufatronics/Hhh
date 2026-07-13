@@ -1,0 +1,40 @@
+name: Release on Tag
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: sdkmanager "ndk;25.2.9519653" "cmake;3.22.1"
+
+      - name: Build and Package
+        run: |
+          git clone --depth 1 -b prism https://github.com/PrismML-Eng/llama.cpp.git
+          chmod +x scripts/*.sh
+          ./scripts/download_model.sh
+          ./scripts/build_runtime.sh arm64
+          ./scripts/build_runtime.sh arm32 || true
+          ./scripts/package_assets.sh
+          ./gradlew assembleRelease
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            app/build/outputs/apk/release/app-release.apk
+          generate_release_notes: true

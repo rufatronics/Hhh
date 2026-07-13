@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Tinol</string>
+    <string name="about_title">About Tinol</string>
+    <string name="about_text">Developed by Aga for users seeking offline AI capabilities. Powered by Bonsai 1.7B.</string>
+    <string name="send">Send</string>
+    <string name="type_message">Type a message...</string>
+</resources>
