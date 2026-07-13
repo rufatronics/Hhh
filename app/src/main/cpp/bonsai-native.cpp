@@ -11,6 +11,7 @@
 struct BonsaiContext {
     llama_model * model = nullptr;
     llama_context * ctx = nullptr;
+    const llama_vocab * vocab = nullptr;
 };
 
 extern "C" {
@@ -46,6 +47,7 @@ Java_com_aga_tinol_BonsaiNative_loadModel(JNIEnv *env, jclass clazz, jstring mod
     BonsaiContext * bctx = new BonsaiContext();
     bctx->model = model;
     bctx->ctx = ctx;
+    bctx->vocab = llama_model_get_vocab(model);
 
     env->ReleaseStringUTFChars(model_path, path);
     return reinterpret_cast<jlong>(bctx);
@@ -70,11 +72,11 @@ Java_com_aga_tinol_BonsaiNative_tokenize(JNIEnv *env, jclass clazz, jlong handle
     const char *text = env->GetStringUTFChars(prompt, nullptr);
 
     std::vector<llama_token> tokens(strlen(text) + (add_bos ? 1 : 0));
-    int n_tokens = llama_tokenize(bctx->model, text, strlen(text), tokens.data(), tokens.size(), add_bos, false);
+    int n_tokens = llama_tokenize(bctx->vocab, text, strlen(text), tokens.data(), tokens.size(), add_bos, false);
 
     if (n_tokens < 0) {
         tokens.resize(-n_tokens);
-        n_tokens = llama_tokenize(bctx->model, text, strlen(text), tokens.data(), tokens.size(), add_bos, false);
+        n_tokens = llama_tokenize(bctx->vocab, text, strlen(text), tokens.data(), tokens.size(), add_bos, false);
     }
 
     jintArray result = env->NewIntArray(n_tokens);
@@ -116,26 +118,20 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
         return;
     }
 
+    // Set up sampling
+    llama_sampler_chain_params sparams = { .no_perf = true };
+    struct llama_sampler * smpl = llama_sampler_chain_init(sparams);
+    llama_sampler_chain_add(smpl, llama_sampler_init_top_p(top_p, 1));
+    llama_sampler_chain_add(smpl, llama_sampler_init_temp(temp));
+    llama_sampler_chain_add(smpl, llama_sampler_init_dist(1234)); // Fixed seed for now
+
     int n_cur = tokens_list.size();
     int n_gen = 0;
 
     while (n_gen < max_tokens) {
-        auto logits = llama_get_logits_ith(bctx->ctx, batch.n_tokens - 1);
-        int n_vocab = llama_n_vocab(bctx->model);
+        const llama_token new_token_id = llama_sampler_sample(smpl, bctx->ctx, -1);
 
-        std::vector<llama_token_data> candidates;
-        candidates.reserve(n_vocab);
-        for (llama_token token_id = 0; token_id < n_vocab; token_id++) {
-            candidates.push_back({token_id, logits[token_id], 0.0f});
-        }
-
-        llama_token_data_array candidates_p = { candidates.data(), candidates.size(), false };
-
-        llama_sample_top_p(bctx->ctx, &candidates_p, top_p, 1);
-        llama_sample_temp(bctx->ctx, &candidates_p, temp);
-        const llama_token new_token_id = llama_sample_token(bctx->ctx, &candidates_p);
-
-        if (new_token_id == llama_token_eos(bctx->model)) break;
+        if (llama_vocab_is_eog(bctx->vocab, new_token_id)) break;
 
         jboolean should_continue = env->CallBooleanMethod(callback, onTokenMethod, (jint)new_token_id);
         if (!should_continue) break;
@@ -157,6 +153,7 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
         n_gen++;
     }
 
+    llama_sampler_free(smpl);
     llama_batch_free(batch);
 }
 
@@ -164,10 +161,10 @@ JNIEXPORT jstring JNICALL
 Java_com_aga_tinol_BonsaiNative_tokenToString(JNIEnv *env, jclass clazz, jlong handle, jint token_id) {
     BonsaiContext * bctx = reinterpret_cast<BonsaiContext *>(handle);
     std::vector<char> result(128);
-    int n = llama_token_to_piece(bctx->model, (llama_token)token_id, result.data(), result.size());
+    int n = llama_token_to_piece(bctx->vocab, (llama_token)token_id, result.data(), result.size(), 0, false);
     if (n < 0) {
         result.resize(-n);
-        n = llama_token_to_piece(bctx->model, (llama_token)token_id, result.data(), result.size());
+        n = llama_token_to_piece(bctx->vocab, (llama_token)token_id, result.data(), result.size(), 0, false);
     }
     result.resize(n);
     return env->NewStringUTF(std::string(result.begin(), result.end()).c_str());
