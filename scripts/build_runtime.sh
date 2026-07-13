@@ -1,9 +1,13 @@
 #!/bin/bash
 set -e
 
-# Expected ANDROID_HOME or ANDROID_SDK_ROOT to be set by CI
-NDK_VERSION="25.2.9519653"
-ANDROID_NDK=$ANDROID_HOME/ndk/$NDK_VERSION
+# Use ANDROID_NDK_HOME if set, otherwise fallback to ANDROID_HOME
+if [ -n "$ANDROID_NDK_HOME" ]; then
+  ANDROID_NDK="$ANDROID_NDK_HOME"
+else
+  NDK_VERSION="25.2.9519653"
+  ANDROID_NDK=$ANDROID_HOME/ndk/$NDK_VERSION
+fi
 
 ABI=$1
 if [ "$ABI" == "arm64" ]; then
@@ -16,12 +20,10 @@ else
   CFLAGS="-march=armv7-a"
 fi
 
-echo "Building optimized llama.cpp shared library for $ABI_NAME..."
+echo "Building optimized llama.cpp shared library for $ABI_NAME using NDK at $ANDROID_NDK..."
 
 if [ ! -d "llama.cpp" ]; then
   echo "ERROR: llama.cpp directory not found. Please clone it first."
-  # Using return instead of exit to avoid session issues if sourced,
-  # but this is a script, so we use (exit 1) in a subshell or just let set -e handle it.
   false
 fi
 

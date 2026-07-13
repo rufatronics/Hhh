@@ -20,17 +20,41 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install NDK
-        run: sdkmanager "ndk;25.2.9519653" "cmake;3.22.1"
+      - name: Install NDK and CMake
+        run: |
+          yes | sdkmanager --install "ndk;25.2.9519653" "cmake;3.22.1"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
       - name: Clone PrismML Llama runtime
         run: |
           git clone --depth 1 -b prism https://github.com/PrismML-Eng/llama.cpp.git
 
+      - name: Cache llama.cpp build
+        uses: actions/cache@v4
+        with:
+          path: llama.cpp/build-android-*
+          key: ${{ runner.os }}-llama-${{ hashFiles('llama.cpp/**') }}
+
       - name: Download Bonsai model and tokenizer
         run: |
           chmod +x scripts/download_model.sh
           ./scripts/download_model.sh
+
+      - name: Cache Models
+        uses: actions/cache@v4
+        with:
+          path: downloads/
+          key: ${{ runner.os }}-models-${{ hashFiles('scripts/download_model.sh') }}
 
       - name: Build native libraries (arm64)
         run: |
@@ -47,7 +71,9 @@ jobs:
           ./scripts/package_assets.sh
 
       - name: Build APKs (Debug and Release)
-        run: ./gradlew assembleDebug assembleRelease
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug assembleRelease
 
       - name: Archive native libs
         run: |
