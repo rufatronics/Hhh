@@ -37,6 +37,8 @@ jobs:
       - name: Clone PrismML Llama runtime
         run: |
           git clone --depth 1 -b prism https://github.com/PrismML-Eng/llama.cpp.git
+          chmod +x scripts/patch_llama.sh
+          ./scripts/patch_llama.sh
 
       - name: Download Bonsai model and tokenizer
         run: |

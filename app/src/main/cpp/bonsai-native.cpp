@@ -24,7 +24,7 @@ Java_com_aga_tinol_BonsaiNative_loadModel(JNIEnv *env, jclass clazz, jstring mod
     llama_backend_init();
 
     auto mparams = llama_model_default_params();
-    llama_model * model = llama_load_model_from_file(path, mparams);
+    llama_model * model = llama_model_load_from_file(path, mparams);
 
     if (!model) {
         LOGE("Failed to load model from %s", path);
@@ -36,10 +36,10 @@ Java_com_aga_tinol_BonsaiNative_loadModel(JNIEnv *env, jclass clazz, jstring mod
     cparams.n_threads = n_threads;
     cparams.n_threads_batch = n_threads;
 
-    llama_context * ctx = llama_new_context_with_model(model, cparams);
+    llama_context * ctx = llama_init_from_model(model, cparams);
     if (!ctx) {
         LOGE("Failed to create context");
-        llama_free_model(model);
+        llama_model_free(model);
         env->ReleaseStringUTFChars(model_path, path);
         return 0;
     }
@@ -58,7 +58,7 @@ Java_com_aga_tinol_BonsaiNative_freeModel(JNIEnv *env, jclass clazz, jlong handl
     BonsaiContext * bctx = reinterpret_cast<BonsaiContext *>(handle);
     if (bctx) {
         if (bctx->ctx) llama_free(bctx->ctx);
-        if (bctx->model) llama_free_model(bctx->model);
+        if (bctx->model) llama_model_free(bctx->model);
         delete bctx;
         llama_backend_free();
         LOGI("Model resources freed");
