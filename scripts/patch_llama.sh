@@ -1,55 +1,67 @@
 #!/bin/bash
 set -e
 
+# Use Python for reliable, idempotent, surgical patching
 python3 -c "
 import os, re
 
-def patch_file(path, search_pattern, replacement, flags=0):
+def patch_file(path, patch_id, patch_func):
     if not os.path.exists(path):
-        print(f'File {path} not found.')
+        print(f'File {path} not found, skipping.')
         return
     with open(path, 'r') as f:
         content = f.read()
-    new_content = re.sub(search_pattern, replacement, content, flags=flags)
+
+    if patch_id in content:
+        print(f'File {path} already patched with {patch_id}.')
+        return
+
+    new_content = patch_func(content)
     if new_content != content:
         with open(path, 'w') as f:
             f.write(new_content)
-        print(f'Successfully patched {path}.')
+        print(f'Successfully applied {patch_id} to {path}.')
     else:
-        print(f'No changes needed for {path}.')
+        print(f'No changes performed for {patch_id} on {path}.')
 
-# 1. POSIX Compatibility (madvise)
-mmap_path = 'llama.cpp/src/llama-mmap.cpp'
-if os.path.exists(mmap_path):
-    with open(mmap_path, 'r') as f:
-        c = f.read()
+def apply_mmap_patch(c):
+    # Ensure sys/mman.h is included for madvise
     if '#include <sys/mman.h>' not in c:
         c = '#include <sys/mman.h>\n' + c
+    # Map posix_madvise to madvise and associated constants
     c = re.sub(r'\bposix_madvise\b', 'madvise', c)
     c = re.sub(r'\bPOSIX_MADV_', 'MADV_', c)
-    with open(mmap_path, 'w') as f:
-        f.write(c)
-    print(f'Patched {mmap_path}')
+    return '/* ANDROID_POSIX_PATCH */\n' + c
 
-# 2. ARMv7 Intrinsic Emulation (vqtbl1q_u8)
-cpu_impl_path = 'llama.cpp/ggml/src/ggml-cpu/ggml-cpu-impl.h'
-pattern = r'(?:inline\s+static|static\s+inline)\s+uint8x16_t\s+ggml_vqtbl1q_u8\s*\(uint8x16_t\s+a,\s*uint8x16_t\s+b\)\s*\{.*?\}'
-replacement = r'''static inline uint8x16_t ggml_vqtbl1q_u8(uint8x16_t a, uint8x16_t b) {
+def apply_cpu_impl_patch(c):
+    # Define emulation for vqtbl1q_u8 using vtbl2_u8 (available on ARMv7)
+    emu = '''
+/* ANDROID_VQTBL1Q_PATCH */
 #if defined(__arm__) && !defined(__aarch64__)
+#include <arm_neon.h>
+#ifndef GGML_VQTBL1Q_U8_PATCHED
+#define GGML_VQTBL1Q_U8_PATCHED
+static inline uint8x16_t ggml_vqtbl1q_u8_emu(uint8x16_t a, uint8x16_t b) {
     uint8x8x2_t t; t.val[0] = vget_low_u8(a); t.val[1] = vget_high_u8(a);
     return vcombine_u8(vtbl2_u8(t, vget_low_u8(b)), vtbl2_u8(t, vget_high_u8(b)));
-#else
-    uint8x16_t res;
-    res[ 0] = a[b[ 0]]; res[ 1] = a[b[ 1]]; res[ 2] = a[b[ 2]]; res[ 3] = a[b[ 3]];
-    res[ 4] = a[b[ 4]]; res[ 5] = a[b[ 5]]; res[ 6] = a[b[ 6]]; res[ 7] = a[b[ 7]];
-    res[ 8] = a[b[ 8]]; res[ 9] = a[b[ 9]]; res[10] = a[b[10]]; res[11] = a[b[11]];
-    res[12] = a[b[12]]; res[13] = a[b[13]]; res[14] = a[b[14]]; res[15] = a[b[15]];
-    return res;
+}
+#define vqtbl1q_u8 ggml_vqtbl1q_u8_emu
+#define ggml_vqtbl1q_u8 ggml_vqtbl1q_u8_emu
 #endif
-}'''
-patch_file(cpu_impl_path, pattern, replacement, flags=re.DOTALL)
+#endif
+'''
+    # Wrap original ggml_vqtbl1q_u8 definition to avoid redefinition
+    pattern = r'((?:inline\s+static|static\s+inline)\s+uint8x16_t\s+ggml_vqtbl1q_u8\s*\(uint8x16_t\s+a,\s*uint8x16_t\s+b\)\s*\{.*?^\})'
+    replacement = r'#ifndef GGML_VQTBL1Q_U8_PATCHED\n\1\n#endif'
+    new_c = re.sub(pattern, replacement, c, flags=re.DOTALL | re.MULTILINE)
 
-# 3. Direct uses in quants.c
-quants_path = 'llama.cpp/ggml/src/ggml-cpu/arch/arm/quants.c'
-patch_file(quants_path, r'(?<!ggml_)\bvqtbl1q_u8\b', 'ggml_vqtbl1q_u8')
+    return emu + new_c
+
+def apply_quants_patch(c):
+    # Map bare vqtbl1q_u8 uses to ggml_ prefix (which we patched)
+    return re.sub(r'(?<!ggml_)\bvqtbl1q_u8\b', 'ggml_vqtbl1q_u8', c)
+
+patch_file('llama.cpp/src/llama-mmap.cpp', 'ANDROID_POSIX_PATCH', apply_mmap_patch)
+patch_file('llama.cpp/ggml/src/ggml-cpu/ggml-cpu-impl.h', 'ANDROID_VQTBL1Q_PATCH', apply_cpu_impl_patch)
+patch_file('llama.cpp/ggml/src/ggml-cpu/arch/arm/quants.c', 'GGML_VQTBL1Q_PREFIX_PATCH', apply_quants_patch)
 "
