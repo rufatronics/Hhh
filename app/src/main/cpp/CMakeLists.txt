@@ -2,10 +2,18 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project("tinol")
 
-set(LLAMA_CPP_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../../../llama.cpp)
+# Set llama.cpp root path relative to project root
+# Project root is at ../../../ relative to this file
+get_filename_component(LLAMA_CPP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../llama.cpp" ABSOLUTE)
 
-if (NOT EXISTS ${LLAMA_CPP_ROOT}/CMakeLists.txt)
-    message(FATAL_ERROR "llama.cpp not found at ${LLAMA_CPP_ROOT}")
+# Re-check path assuming CI checkout location
+if (NOT EXISTS "${LLAMA_CPP_ROOT}/CMakeLists.txt")
+    # Fallback to local checkout if ../../../../ fails (e.g. if built from different subdir)
+    get_filename_component(LLAMA_CPP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../llama.cpp" ABSOLUTE)
+endif()
+
+if (NOT EXISTS "${LLAMA_CPP_ROOT}/CMakeLists.txt")
+    message(FATAL_ERROR "llama.cpp not found. Resolved path: ${LLAMA_CPP_ROOT}")
 endif()
 
 # Disable llama.cpp features for Android JNI
@@ -23,14 +31,14 @@ if (ANDROID_ABI STREQUAL "armeabi-v7a")
     set(GGML_NEON OFF CACHE BOOL "" FORCE)
 endif()
 
-add_subdirectory(${LLAMA_CPP_ROOT} ${CMAKE_CURRENT_BINARY_DIR}/llama.cpp_build)
+add_subdirectory("${LLAMA_CPP_ROOT}" ${CMAKE_CURRENT_BINARY_DIR}/llama.cpp_build)
 
 add_library(tinol SHARED bonsai-native.cpp)
 
 target_include_directories(tinol PRIVATE
-    ${LLAMA_CPP_ROOT}/include
-    ${LLAMA_CPP_ROOT}/common
-    ${LLAMA_CPP_ROOT}/ggml/include
+    "${LLAMA_CPP_ROOT}/include"
+    "${LLAMA_CPP_ROOT}/common"
+    "${LLAMA_CPP_ROOT}/ggml/include"
 )
 
 find_library(log-lib log)
