@@ -95,7 +95,7 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
     jint * tokens_ptr = env->GetIntArrayElements(input_tokens, nullptr);
 
     std::vector<llama_token> tokens_list;
-    for (int i = 0; i < n_input; ++i) tokens_list.push_back(tokens_ptr[i]);
+    for (int i = 0; i < (int)tokens_list.size(); ++i) tokens_list.push_back(tokens_ptr[i]);
     env->ReleaseIntArrayElements(input_tokens, tokens_ptr, JNI_ABORT);
 
     jclass callbackClass = env->GetObjectClass(callback);
