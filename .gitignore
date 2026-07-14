@@ -1,0 +1,7 @@
+.gradle/
+build/
+app/build/
+*.so
+downloads/
+llama.cpp/
+llama.cpp_check/
