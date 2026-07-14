@@ -103,12 +103,12 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
 
     llama_batch batch = llama_batch_init(512, 0, 1);
 
-    for (int i = 0; i < tokens_list.size(); ++i) {
+    for (int i = 0; i < (int)tokens_list.size(); ++i) {
         batch.token[batch.n_tokens] = tokens_list[i];
         batch.pos[batch.n_tokens] = i;
         batch.n_seq_id[batch.n_tokens] = 1;
         batch.seq_id[batch.n_tokens][0] = 0;
-        batch.logits[batch.n_tokens] = (i == tokens_list.size() - 1);
+        batch.logits[batch.n_tokens] = (i == (int)tokens_list.size() - 1);
         batch.n_tokens++;
     }
 
