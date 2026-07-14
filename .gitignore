@@ -5,3 +5,5 @@ app/build/
 downloads/
 llama.cpp/
 llama.cpp_check/
+.kotlin/
+app/.cxx/
