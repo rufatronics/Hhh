@@ -22,20 +22,13 @@ jobs:
       - name: Install NDK and CMake
         run: |
           yes | sdkmanager --install "ndk;25.2.9519653" "cmake;3.22.1"
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
-
-      - name: Setup local.properties
-        run: |
-          echo "ndk.dir=$ANDROID_HOME/ndk/25.2.9519653" > local.properties
 
       - name: Build and Package
         run: |
           git clone --depth 1 -b prism https://github.com/PrismML-Eng/llama.cpp.git
           chmod +x scripts/*.sh
+          ./scripts/patch_llama.sh
           ./scripts/download_model.sh
-          ./scripts/build_runtime.sh arm64
-          ./scripts/build_runtime.sh arm32 || true
-          ./scripts/package_assets.sh
           chmod +x gradlew
           ./gradlew assembleRelease
 
