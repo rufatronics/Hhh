@@ -4,4 +4,11 @@
     <string name="about_text">Developed by Aga for users seeking offline AI capabilities. Powered by Bonsai 1.7B.</string>
     <string name="send">Send</string>
     <string name="type_message">Type a message...</string>
+    <string name="settings">Settings</string>
+    <string name="temp">Temperature</string>
+    <string name="top_p">Top-P</string>
+    <string name="context_size">Context Size</string>
+    <string name="batch_size">Batch Size</string>
+    <string name="save">Save</string>
+    <string name="thinking">Tinol is thinking...</string>
 </resources>
