@@ -26,10 +26,10 @@ jobs:
       - name: Build and Package
         run: |
           git clone --depth 1 -b prism https://github.com/PrismML-Eng/llama.cpp.git
-          chmod +x scripts/patch_llama.sh
+          chmod +x scripts/*.sh
           ./scripts/patch_llama.sh
-          chmod +x scripts/download_model.sh
           ./scripts/download_model.sh
+          ./scripts/package_assets.sh
           chmod +x gradlew
           ./gradlew assembleRelease
 
@@ -37,5 +37,5 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/**/*.apk
           generate_release_notes: true

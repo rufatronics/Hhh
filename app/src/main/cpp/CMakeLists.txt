@@ -2,12 +2,15 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project("tinol")
 
-# Set llama.cpp root path relative to project root
+# Project root relative to this file
+# This file is at app/src/main/cpp/CMakeLists.txt
+# llama.cpp is at llama.cpp/ in the root
+# From app/src/main/cpp, ../../../ is app/, ../../../../ is root
 get_filename_component(LLAMA_CPP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../llama.cpp" ABSOLUTE)
 
-# Re-check path assuming CI checkout location
 if (NOT EXISTS "${LLAMA_CPP_ROOT}/CMakeLists.txt")
-    get_filename_component(LLAMA_CPP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../llama.cpp" ABSOLUTE)
+    # Try one more level up just in case of environment differences
+    get_filename_component(LLAMA_CPP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../llama.cpp" ABSOLUTE)
 endif()
 
 if (NOT EXISTS "${LLAMA_CPP_ROOT}/CMakeLists.txt")
@@ -26,7 +29,6 @@ set(GGML_LLAMAFILE OFF CACHE BOOL "" FORCE)
 
 # Fix ARMv7 build by disabling NEON if needed to avoid intrinsic conflicts
 if (ANDROID_ABI STREQUAL "armeabi-v7a")
-    message(STATUS "Disabling NEON for ARMv7 build to avoid intrinsic conflicts")
     set(GGML_NEON OFF CACHE BOOL "" FORCE)
 endif()
 
