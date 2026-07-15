@@ -51,11 +51,8 @@ android {
         jvmTarget = '17'
     }
 
-    sourceSets {
-        main {
-            assets.srcDirs += 'src/main/assets/models'
-        }
-    }
+    // Removed custom assets srcDirs to avoid confusion.
+    // Standard layout src/main/assets/models/ will be used.
 }
 
 dependencies {

@@ -9,7 +9,7 @@ object BonsaiNative {
         System.loadLibrary("tinol")
     }
 
-    external fun loadModel(modelPath: String, nThreads: Int): Long
+    external fun loadModel(modelPath: String, nThreads: Int, nCtx: Int, nBatch: Int): Long
     external fun freeModel(ctx: Long)
     external fun tokenize(ctx: Long, prompt: String, addBos: Boolean): IntArray
     external fun generate(

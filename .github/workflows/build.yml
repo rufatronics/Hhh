@@ -45,10 +45,20 @@ jobs:
           chmod +x scripts/download_model.sh
           ./scripts/download_model.sh
 
+      - name: Package assets
+        run: |
+          chmod +x scripts/package_assets.sh
+          ./scripts/package_assets.sh
+
       - name: Build APKs (Debug and Release)
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug assembleRelease
+
+      - name: Verify APK presence
+        run: |
+          echo "Listing all APKs found:"
+          find app/build/outputs/apk -name "*.apk"
 
       - name: Generate checksums
         run: |
@@ -59,5 +69,5 @@ jobs:
         with:
           name: tinol-build
           path: |
-            app/build/outputs/apk/
+            app/build/outputs/apk/**/*.apk
             checksums.txt

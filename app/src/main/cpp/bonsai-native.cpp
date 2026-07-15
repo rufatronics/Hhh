@@ -17,9 +17,9 @@ struct BonsaiContext {
 extern "C" {
 
 JNIEXPORT jlong JNICALL
-Java_com_aga_tinol_BonsaiNative_loadModel(JNIEnv *env, jclass clazz, jstring model_path, jint n_threads) {
+Java_com_aga_tinol_BonsaiNative_loadModel(JNIEnv *env, jclass clazz, jstring model_path, jint n_threads, jint n_ctx, jint n_batch) {
     const char *path = env->GetStringUTFChars(model_path, nullptr);
-    LOGI("Loading model from: %s", path);
+    LOGI("Loading model from: %s (ctx: %d, batch: %d)", path, n_ctx, n_batch);
 
     llama_backend_init();
 
@@ -35,6 +35,8 @@ Java_com_aga_tinol_BonsaiNative_loadModel(JNIEnv *env, jclass clazz, jstring mod
     auto cparams = llama_context_default_params();
     cparams.n_threads = n_threads;
     cparams.n_threads_batch = n_threads;
+    cparams.n_ctx = n_ctx;
+    cparams.n_batch = n_batch;
 
     llama_context * ctx = llama_init_from_model(model, cparams);
     if (!ctx) {
@@ -95,7 +97,7 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
     jint * tokens_ptr = env->GetIntArrayElements(input_tokens, nullptr);
 
     std::vector<llama_token> tokens_list;
-    for (int i = 0; i < (int)tokens_list.size(); ++i) tokens_list.push_back(tokens_ptr[i]);
+    for (int i = 0; i < n_input; ++i) tokens_list.push_back(tokens_ptr[i]);
     env->ReleaseIntArrayElements(input_tokens, tokens_ptr, JNI_ABORT);
 
     jclass callbackClass = env->GetObjectClass(callback);
