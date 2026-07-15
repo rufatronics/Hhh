@@ -41,7 +41,7 @@
             android:text="@string/thinking"
             android:padding="8dp"
             android:visibility="gone"
-            android:fontStyle="italic"
+            android:textStyle="italic"
             app:layout_constraintBottom_toTopOf="@id/input_layout"
             app:layout_constraintStart_toStartOf="parent" />
 
