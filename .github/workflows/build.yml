@@ -2,7 +2,7 @@ name: Android CI (build)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feat/tinol-android-app ]
   pull_request:
   workflow_dispatch:
 
@@ -62,7 +62,6 @@ jobs:
           find app/build/outputs/apk -name "*.apk"
 
       - name: Upload to Appetize.io
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -n 1)
           if [ -f "$APK_PATH" ]; then
@@ -85,5 +84,6 @@ jobs:
         with:
           name: tinol-apks
           path: |
-            app/build/outputs/apk/**/*.apk
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
             checksums.txt

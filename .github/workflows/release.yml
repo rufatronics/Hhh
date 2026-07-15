@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feat/tinol-android-app ]
     tags: ['v*']
   workflow_dispatch:
 
@@ -39,7 +39,13 @@ jobs:
 
       - name: Rename APKs for clarity
         run: |
-          find app/build/outputs/apk/release -name "*.apk" -exec cp {} tinol-release.apk \;
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -f "$APK_PATH" ]; then
+             cp "$APK_PATH" tinol-release.apk
+          else
+             echo "Release APK not found."
+             /usr/bin/false
+          fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
