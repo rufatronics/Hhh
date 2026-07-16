@@ -35,6 +35,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      - name: Generate Keystore
+        run: |
+          keytool -genkey -v -keystore app/keystore.jks -alias key0 -keyalg RSA -keysize 2048 -validity 10000 -storepass password -keypass password -dname "CN=tinol, OU=aga, O=tinol, L=Tinol, S=Tinol, C=US"
+
       - name: Clone PrismML Llama runtime
         run: |
           git clone --depth 1 -b prism https://github.com/PrismML-Eng/llama.cpp.git
@@ -63,15 +67,15 @@ jobs:
 
       - name: Upload to Appetize.io
         run: |
-          APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -n 1)
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
           if [ -f "$APK_PATH" ]; then
-            echo "Uploading $APK_PATH to Appetize.io..."
+            echo "Uploading signed $APK_PATH to Appetize.io..."
             curl https://api.appetize.io/v1/apps \
               -u "${{ secrets.APPETIZE_TOKEN }}:" \
               -F "file=@$APK_PATH" \
               -F "platform=android"
           else
-            echo "Debug APK not found for Appetize upload."
+            echo "Release APK not found for Appetize upload."
             /usr/bin/false
           fi
 
