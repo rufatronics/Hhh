@@ -25,6 +25,12 @@ jobs:
         run: |
           yes | sdkmanager --install "ndk;25.2.9519653" "cmake;3.22.1"
 
+      - name: Enable KVM group permissions
+        run: |
+          echo 'Check KVM'
+          ls -l /dev/kvm || true
+          sudo chmod 666 /dev/kvm || true
+
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -58,7 +64,38 @@ jobs:
       - name: Build APKs (Debug and Release)
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug assembleRelease
+          ./gradlew assembleDebug assembleRelease assembleDebugAndroidTest
+
+      - name: Run UI Tests and Capture Logcat
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-snapshot-load -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            adb logcat -c
+            ./gradlew connectedCheck
+            echo "=== EXTRACTING EMULATOR CONVERSATION LOGS ==="
+            adb logcat -d -s TinolTestLog BonsaiNative
+            echo "=== GENERATING testresult.md ==="
+            echo "# Android Emulator Conversation Test Results" > testresult.md
+            echo "" >> testresult.md
+            echo "### Full Conversation Logs" >> testresult.md
+            echo "" >> testresult.md
+            echo "```" >> testresult.md
+            adb logcat -d -s TinolTestLog | grep -E "USER_PROMPT|BOT_RESPONSE" >> testresult.md || true
+            echo "```" >> testresult.md
+            cat testresult.md
+
+      - name: Commit testresult.md to repository
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add testresult.md || true
+          git commit -m "chore: update testresult.md with emulator conversation logs [skip ci]" || true
+          git push origin HEAD:${{ github.ref_name }} || true
 
       - name: Verify APK presence
         run: |
@@ -70,10 +107,7 @@ jobs:
           APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
           if [ -f "$APK_PATH" ]; then
             echo "Uploading signed $APK_PATH to Appetize.io..."
-            curl https://api.appetize.io/v1/apps \
-              -u "${{ secrets.APPETIZE_TOKEN }}:" \
-              -F "file=@$APK_PATH" \
-              -F "platform=android"
+            curl https://api.appetize.io/v1/apps               -u "${{ secrets.APPETIZE_TOKEN }}:"               -F "file=@$APK_PATH"               -F "platform=android"
           else
             echo "Release APK not found for Appetize upload."
             /usr/bin/false
@@ -91,3 +125,4 @@ jobs:
             app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/release/*.apk
             checksums.txt
+            testresult.md
