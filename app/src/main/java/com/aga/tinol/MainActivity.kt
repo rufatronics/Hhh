@@ -17,7 +17,7 @@ import java.io.File
 import java.io.FileOutputStream
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var chatAdapter: ChatAdapter
+    lateinit var chatAdapter: ChatAdapter
     private lateinit var thinkingIndicator: TextView
     private var modelCtx: Long = 0
 
@@ -137,7 +137,7 @@ class MainActivity : AppCompatActivity() {
 data class ChatMessage(var text: String, val isUser: Boolean)
 
 class ChatAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-    private val messages = mutableListOf<ChatMessage>()
+    val messages = mutableListOf<ChatMessage>()
 
     companion object {
         private const val TYPE_USER = 1
