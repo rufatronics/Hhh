@@ -117,12 +117,15 @@ class MainActivity : AppCompatActivity() {
                     val word = BonsaiNative.tokenToString(modelCtx, tokenId)
                     responseBuilder.append(word)
                     runOnUiThread {
-                        thinkingIndicator.visibility = View.GONE
                         chatAdapter.updateLastMessage(responseBuilder.toString())
                     }
                     return true
                 }
             })
+
+            runOnUiThread {
+                thinkingIndicator.visibility = View.GONE
+            }
         }.start()
     }
 
