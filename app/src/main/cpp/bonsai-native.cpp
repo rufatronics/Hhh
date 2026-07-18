@@ -100,6 +100,10 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
     for (int i = 0; i < n_input; ++i) tokens_list.push_back(tokens_ptr[i]);
     env->ReleaseIntArrayElements(input_tokens, tokens_ptr, JNI_ABORT);
 
+    // Clear KV Cache / memory sequence 0 before decoding a new prompt
+    llama_memory_t mem = llama_get_memory(bctx->ctx);
+    llama_memory_seq_rm(mem, 0, -1, -1);
+
     jclass callbackClass = env->GetObjectClass(callback);
     jmethodID onTokenMethod = env->GetMethodID(callbackClass, "onToken", "(I)Z");
 
