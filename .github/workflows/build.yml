@@ -76,18 +76,23 @@ jobs:
           disable-animations: true
           script: |
             adb logcat -c
-            ./gradlew connectedCheck
-            echo "=== EXTRACTING EMULATOR CONVERSATION LOGS ==="
-            adb logcat -d -s TinolTestLog BonsaiNative
-            echo "=== GENERATING testresult.md ==="
-            echo "# Android Emulator Conversation Test Results" > testresult.md
-            echo "" >> testresult.md
-            echo "### Full Conversation Logs" >> testresult.md
-            echo "" >> testresult.md
-            echo "```" >> testresult.md
-            adb logcat -d -s TinolTestLog | grep -E "USER_PROMPT|BOT_RESPONSE" >> testresult.md || true
-            echo "```" >> testresult.md
-            cat testresult.md
+            if ./gradlew connectedCheck; then
+              echo "=== EXTRACTING EMULATOR CONVERSATION LOGS ==="
+              adb logcat -d -s TinolTestLog BonsaiNative
+              echo "=== GENERATING testresult.md ==="
+              echo "# Android Emulator Conversation Test Results" > testresult.md
+              echo "" >> testresult.md
+              echo "### Full Conversation Logs" >> testresult.md
+              echo "" >> testresult.md
+              echo "```" >> testresult.md
+              adb logcat -d -s TinolTestLog | grep -E "USER_PROMPT|BOT_RESPONSE" >> testresult.md || true
+              echo "```" >> testresult.md
+              cat testresult.md
+            else
+              echo "=== UI TESTS FAILED! CAPTURING CRASH LOGS ==="
+              adb logcat -d -s TinolTestLog BonsaiNative AndroidRuntime libc
+              /usr/bin/false
+            fi
 
       - name: Commit testresult.md to repository
         run: |
