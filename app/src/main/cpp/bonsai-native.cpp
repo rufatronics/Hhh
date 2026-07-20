@@ -12,6 +12,9 @@ struct BonsaiContext {
     llama_model * model = nullptr;
     llama_context * ctx = nullptr;
     const llama_vocab * vocab = nullptr;
+    int n_threads = 4;
+    int n_ctx = 2048;
+    int n_batch = 256;
 };
 
 extern "C" {
@@ -50,6 +53,9 @@ Java_com_aga_tinol_BonsaiNative_loadModel(JNIEnv *env, jclass clazz, jstring mod
     bctx->model = model;
     bctx->ctx = ctx;
     bctx->vocab = llama_model_get_vocab(model);
+    bctx->n_threads = n_threads;
+    bctx->n_ctx = n_ctx;
+    bctx->n_batch = n_batch;
 
     env->ReleaseStringUTFChars(model_path, path);
     return reinterpret_cast<jlong>(bctx);
@@ -99,6 +105,17 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
     std::vector<llama_token> tokens_list;
     for (int i = 0; i < n_input; ++i) tokens_list.push_back(tokens_ptr[i]);
     env->ReleaseIntArrayElements(input_tokens, tokens_ptr, JNI_ABORT);
+
+    // Recreate context completely to clear KV Cache state 100% safely and avoid GGML_ASSERT errors
+    if (bctx->ctx) {
+        llama_free(bctx->ctx);
+    }
+    auto cparams = llama_context_default_params();
+    cparams.n_threads = bctx->n_threads;
+    cparams.n_threads_batch = bctx->n_threads;
+    cparams.n_ctx = bctx->n_ctx;
+    cparams.n_batch = bctx->n_batch;
+    bctx->ctx = llama_init_from_model(bctx->model, cparams);
 
     jclass callbackClass = env->GetObjectClass(callback);
     jmethodID onTokenMethod = env->GetMethodID(callbackClass, "onToken", "(I)Z");

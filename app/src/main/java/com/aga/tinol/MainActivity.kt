@@ -85,12 +85,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun prepareModelFile(): File {
         val file = File(filesDir, "Bonsai-1.7B-Q1_0.gguf")
+        val tempFile = File(filesDir, "Bonsai-1.7B-Q1_0.gguf.tmp")
         if (!file.exists()) {
+            if (tempFile.exists()) {
+                tempFile.delete()
+            }
             assets.open("models/Bonsai-1.7B-Q1_0.gguf").use { input ->
-                FileOutputStream(file).use { output ->
+                FileOutputStream(tempFile).use { output ->
                     input.copyTo(output)
                 }
             }
+            tempFile.renameTo(file)
         }
         return file
     }
@@ -117,12 +122,15 @@ class MainActivity : AppCompatActivity() {
                     val word = BonsaiNative.tokenToString(modelCtx, tokenId)
                     responseBuilder.append(word)
                     runOnUiThread {
-                        thinkingIndicator.visibility = View.GONE
                         chatAdapter.updateLastMessage(responseBuilder.toString())
                     }
                     return true
                 }
             })
+
+            runOnUiThread {
+                thinkingIndicator.visibility = View.GONE
+            }
         }.start()
     }
 

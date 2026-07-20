@@ -29,24 +29,24 @@ class MainActivityUITest {
             .perform(click())
 
         // Wait for generation to start (thinking indicator becomes visible)
-        Thread.sleep(1000)
+        Thread.sleep(1500)
 
         // Wait for generation to finish (thinking indicator becomes gone)
         var elapsed = 0
-        val maxWait = 25000 // 25 seconds max wait for each token generation in tests
+        val maxWait = 35000 // 35 seconds max wait for slow CI evaluation
         while (elapsed < maxWait) {
             try {
                 onView(withId(R.id.thinking_indicator))
                     .check(matches(withEffectiveVisibility(Visibility.GONE)))
                 break
             } catch (e: AssertionError) {
-                Thread.sleep(500)
-                elapsed += 500
+                Thread.sleep(1000)
+                elapsed += 1000
             }
         }
 
         // Add a brief cushion for rendering
-        Thread.sleep(1000)
+        Thread.sleep(1500)
 
         // Verify the recycler view is displayed and contains our messages
         onView(withId(R.id.chat_recycler))
@@ -65,8 +65,8 @@ class MainActivityUITest {
 
     @Test
     fun testAppLaunchAndSendFiveMessages() {
-        // Wait for model initialization
-        Thread.sleep(5000)
+        // Wait for GGUF model assets copying and loading into memory to finish in slow CI
+        Thread.sleep(15000)
 
         val prompts = listOf(
             "Hello, how are you?",
