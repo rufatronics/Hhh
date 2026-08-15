@@ -60,6 +60,7 @@ Java_com_aga_tinol_BonsaiNative_loadModel(JNIEnv *env, jclass clazz, jstring mod
 
 JNIEXPORT void JNICALL
 Java_com_aga_tinol_BonsaiNative_freeModel(JNIEnv *env, jclass clazz, jlong handle) {
+    if (handle == 0) return;
     BonsaiContext * bctx = reinterpret_cast<BonsaiContext *>(handle);
     if (bctx) {
         if (bctx->ctx) llama_free(bctx->ctx);
@@ -73,6 +74,7 @@ Java_com_aga_tinol_BonsaiNative_freeModel(JNIEnv *env, jclass clazz, jlong handl
 JNIEXPORT jintArray JNICALL
 Java_com_aga_tinol_BonsaiNative_tokenize(JNIEnv *env, jclass clazz, jlong handle, jstring prompt,
                                          jboolean add_bos) {
+    if (handle == 0) return env->NewIntArray(0);
     BonsaiContext * bctx = reinterpret_cast<BonsaiContext *>(handle);
     const char *text = env->GetStringUTFChars(prompt, nullptr);
 
@@ -95,6 +97,7 @@ JNIEXPORT void JNICALL
 Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle, jintArray input_tokens,
                                          jint max_tokens, jfloat top_p, jfloat temp,
                                          jobject callback) {
+    if (handle == 0) return;
     BonsaiContext * bctx = reinterpret_cast<BonsaiContext *>(handle);
     jsize n_input = env->GetArrayLength(input_tokens);
     jint * tokens_ptr = env->GetIntArrayElements(input_tokens, nullptr);
@@ -178,6 +181,7 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
 
 JNIEXPORT jstring JNICALL
 Java_com_aga_tinol_BonsaiNative_tokenToString(JNIEnv *env, jclass clazz, jlong handle, jint token_id) {
+    if (handle == 0) return env->NewStringUTF("");
     BonsaiContext * bctx = reinterpret_cast<BonsaiContext *>(handle);
     std::vector<char> result(128);
     int n = llama_token_to_piece(bctx->vocab, (llama_token)token_id, result.data(), result.size(), 0, false);
