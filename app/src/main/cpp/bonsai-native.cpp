@@ -106,7 +106,8 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
     // Fix: Initialize batch with the actual number of tokens to avoid overflow
     int32_t n_tokens = (int32_t)tokens_list.size();
     // Clear KV cache to ensure a fresh state for each prompt (stateless mode)
-    llama_kv_cache_clear(bctx->ctx);
+    // Using llama_memory_seq_rm for this specific llama.cpp branch
+    llama_memory_seq_rm(llama_get_memory(bctx->ctx), 0, -1, -1);
 
     llama_batch batch = llama_batch_init(n_tokens, 0, 1);
 
