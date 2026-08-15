@@ -84,9 +84,9 @@ jobs:
             echo "" >> testresult.md
             echo "### Full Conversation Logs" >> testresult.md
             echo "" >> testresult.md
-            echo "```" >> testresult.md
+            echo '```' >> testresult.md
             adb logcat -d -s TinolTestLog | grep -E "USER_PROMPT|BOT_RESPONSE" >> testresult.md || true
-            echo "```" >> testresult.md
+            echo '```' >> testresult.md
             cat testresult.md
 
       - name: Commit testresult.md to repository
