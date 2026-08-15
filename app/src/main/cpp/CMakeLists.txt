@@ -27,9 +27,9 @@ set(LLAMA_BUILD_APP OFF CACHE BOOL "" FORCE)
 set(GGML_OPENMP OFF CACHE BOOL "" FORCE)
 set(GGML_LLAMAFILE OFF CACHE BOOL "" FORCE)
 
-# Fix ARMv7 build by disabling NEON if needed to avoid intrinsic conflicts
+# Enable NEON on ARMv7 now that missing intrinsics are emulated via patch
 if (ANDROID_ABI STREQUAL "armeabi-v7a")
-    set(GGML_NEON OFF CACHE BOOL "" FORCE)
+    set(GGML_NEON ON CACHE BOOL "" FORCE)
 endif()
 
 add_subdirectory("${LLAMA_CPP_ROOT}" ${CMAKE_CURRENT_BINARY_DIR}/llama.cpp_build)

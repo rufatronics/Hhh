@@ -69,16 +69,32 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadModel() {
+        runOnUiThread { 
+            thinkingIndicator.text = "Loading model..."
+            thinkingIndicator.visibility = View.VISIBLE 
+        }
         Thread {
             try {
                 val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
-                val nCtx = prefs.getInt("context_size", 2048)
+                val nCtx = prefs.getInt("context_size", 1024)
                 val nBatch = prefs.getInt("batch_size", 256)
 
                 val modelFile = prepareModelFile()
                 modelCtx = BonsaiNative.loadModel(modelFile.absolutePath, 4, nCtx, nBatch)
+                
+                runOnUiThread {
+                    thinkingIndicator.visibility = View.GONE
+                    thinkingIndicator.text = getString(R.string.thinking)
+                    if (modelCtx == 0L) {
+                        android.widget.Toast.makeText(this, "Failed to load model", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
+                runOnUiThread { 
+                    thinkingIndicator.visibility = View.GONE
+                    android.widget.Toast.makeText(this, "Error: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                }
             }
         }.start()
     }

@@ -103,22 +103,25 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
     jclass callbackClass = env->GetObjectClass(callback);
     jmethodID onTokenMethod = env->GetMethodID(callbackClass, "onToken", "(I)Z");
 
-    llama_batch batch = llama_batch_init(512, 0, 1);
+    // Fix: Initialize batch with the actual number of tokens to avoid overflow
+    int32_t n_tokens = (int32_t)tokens_list.size();
+    llama_batch batch = llama_batch_init(n_tokens, 0, 1);
 
-    for (int i = 0; i < (int)tokens_list.size(); ++i) {
+    for (int i = 0; i < n_tokens; ++i) {
         batch.token[batch.n_tokens] = tokens_list[i];
         batch.pos[batch.n_tokens] = i;
         batch.n_seq_id[batch.n_tokens] = 1;
         batch.seq_id[batch.n_tokens][0] = 0;
-        batch.logits[batch.n_tokens] = (i == (int)tokens_list.size() - 1);
+        batch.logits[batch.n_tokens] = (i == n_tokens - 1);
         batch.n_tokens++;
     }
 
     if (llama_decode(bctx->ctx, batch) != 0) {
-        LOGE("llama_decode failed");
+        LOGE("llama_decode failed during prompt processing");
         llama_batch_free(batch);
         return;
     }
+    llama_batch_free(batch); // Free prompt batch after decode
 
     // Set up sampling
     llama_sampler_chain_params sparams = { .no_perf = true };
@@ -138,15 +141,10 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
         jboolean should_continue = env->CallBooleanMethod(callback, onTokenMethod, (jint)new_token_id);
         if (!should_continue) break;
 
-        batch.n_tokens = 0;
-        batch.token[batch.n_tokens] = new_token_id;
-        batch.pos[batch.n_tokens] = n_cur;
-        batch.n_seq_id[batch.n_tokens] = 1;
-        batch.seq_id[batch.n_tokens][0] = 0;
-        batch.logits[batch.n_tokens] = true;
-        batch.n_tokens++;
-
-        if (llama_decode(bctx->ctx, batch) != 0) {
+        // Use a single-token batch for generation
+        llama_batch g_batch = llama_batch_get_one((llama_token *)&new_token_id, n_cur);
+        
+        if (llama_decode(bctx->ctx, g_batch) != 0) {
             LOGE("llama_decode failed during generation");
             break;
         }
