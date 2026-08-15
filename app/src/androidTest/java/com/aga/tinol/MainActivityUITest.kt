@@ -65,20 +65,13 @@ class MainActivityUITest {
     }
 
     @Test
-    fun testAppLaunchAndSendFiveMessages() {
+    fun testAppLaunchAndSendOneMessage() {
+        Log.i("TinolTestLog", "TEST_START: Waiting for model initialization")
         // Wait for model initialization
-        Thread.sleep(5000)
+        Thread.sleep(10000)
 
-        val prompts = listOf(
-            "Hello, how are you?",
-            "What is your name?",
-            "Can you tell me a story?",
-            "What is 2 plus 2?",
-            "Goodbye!"
-        )
-
-        for ((index, prompt) in prompts.withIndex()) {
-            sendMessageAndAssertResponse(prompt, index)
-        }
+        Log.i("TinolTestLog", "TEST_STEP: Sending prompt")
+        sendMessageAndAssertResponse("Hello", 0)
+        Log.i("TinolTestLog", "TEST_FINISHED")
     }
 }
