@@ -142,12 +142,20 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
         if (!should_continue) break;
 
         // Use a single-token batch for generation
-        llama_batch g_batch = llama_batch_get_one((llama_token *)&new_token_id, n_cur);
+        llama_batch g_batch = llama_batch_init(1, 0, 1);
+        g_batch.token[0]    = new_token_id;
+        g_batch.pos[0]      = n_cur;
+        g_batch.n_seq_id[0] = 1;
+        g_batch.seq_id[0][0] = 0;
+        g_batch.logits[0]   = true;
+        g_batch.n_tokens    = 1;
         
         if (llama_decode(bctx->ctx, g_batch) != 0) {
             LOGE("llama_decode failed during generation");
+            llama_batch_free(g_batch);
             break;
         }
+        llama_batch_free(g_batch);
 
         n_cur++;
         n_gen++;
