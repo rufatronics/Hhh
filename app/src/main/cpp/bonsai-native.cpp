@@ -12,6 +12,7 @@ struct BonsaiContext {
     llama_model * model = nullptr;
     llama_context * ctx = nullptr;
     const llama_vocab * vocab = nullptr;
+    llama_context_params params;
 };
 
 extern "C" {
@@ -50,6 +51,7 @@ Java_com_aga_tinol_BonsaiNative_loadModel(JNIEnv *env, jclass clazz, jstring mod
     bctx->model = model;
     bctx->ctx = ctx;
     bctx->vocab = llama_model_get_vocab(model);
+    bctx->params = cparams;
 
     env->ReleaseStringUTFChars(model_path, path);
     return reinterpret_cast<jlong>(bctx);
@@ -105,9 +107,16 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
 
     // Fix: Initialize batch with the actual number of tokens to avoid overflow
     int32_t n_tokens = (int32_t)tokens_list.size();
-    // Clear KV cache to ensure a fresh state for each prompt (stateless mode)
-    // Using llama_memory_seq_rm for this specific llama.cpp branch
-    llama_memory_seq_rm(llama_get_memory(bctx->ctx), 0, -1, -1);
+    // Completely reset context for each prompt to bypass KV cache issues in this branch
+    if (bctx->ctx) {
+        llama_free(bctx->ctx);
+        bctx->ctx = llama_init_from_model(bctx->model, bctx->params);
+    }
+
+    if (!bctx->ctx) {
+        LOGE("Failed to re-initialize context");
+        return;
+    }
 
     llama_batch batch = llama_batch_init(n_tokens, 0, 1);
 
@@ -139,6 +148,7 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
 
     while (n_gen < max_tokens) {
         const llama_token new_token_id = llama_sampler_sample(smpl, bctx->ctx, -1);
+        llama_sampler_accept(smpl, new_token_id);
 
         if (llama_vocab_is_eog(bctx->vocab, new_token_id)) break;
 
@@ -164,9 +174,7 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
         n_cur++;
         n_gen++;
     }
-
     llama_sampler_free(smpl);
-    llama_batch_free(batch);
 }
 
 JNIEXPORT jstring JNICALL
