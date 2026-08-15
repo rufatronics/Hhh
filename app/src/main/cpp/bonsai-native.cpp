@@ -25,6 +25,7 @@ Java_com_aga_tinol_BonsaiNative_loadModel(JNIEnv *env, jclass clazz, jstring mod
     llama_backend_init();
 
     auto mparams = llama_model_default_params();
+    mparams.use_mmap = false; // Disable mmap for better stability on some emulators/devices
     llama_model * model = llama_model_load_from_file(path, mparams);
 
     if (!model) {

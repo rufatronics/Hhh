@@ -76,7 +76,7 @@ class MainActivity : AppCompatActivity() {
         Thread {
             try {
                 val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
-                val nCtx = prefs.getInt("context_size", 1024)
+                val nCtx = prefs.getInt("context_size", 512)
                 val nBatch = prefs.getInt("batch_size", 256)
 
                 val modelFile = prepareModelFile()

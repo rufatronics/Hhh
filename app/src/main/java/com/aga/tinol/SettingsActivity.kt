@@ -22,7 +22,7 @@ class SettingsActivity : AppCompatActivity() {
 
         editTemp.setText(prefs.getFloat("temp", 0.8f).toString())
         editTopP.setText(prefs.getFloat("top_p", 0.95f).toString())
-        editContext.setText(prefs.getInt("context_size", 1024).toString())
+        editContext.setText(prefs.getInt("context_size", 512).toString())
         editBatch.setText(prefs.getInt("batch_size", 256).toString())
 
         btnSave.setOnClickListener {
