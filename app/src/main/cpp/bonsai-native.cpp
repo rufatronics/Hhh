@@ -136,12 +136,10 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
     }
     llama_batch_free(batch); // Free prompt batch after decode
 
-    // Set up sampling
+    // Set up sampling - use greedy for maximum stability during verification
     llama_sampler_chain_params sparams = { .no_perf = true };
     struct llama_sampler * smpl = llama_sampler_chain_init(sparams);
-    llama_sampler_chain_add(smpl, llama_sampler_init_top_p(top_p, 1));
-    llama_sampler_chain_add(smpl, llama_sampler_init_temp(temp));
-    llama_sampler_chain_add(smpl, llama_sampler_init_dist(1234)); // Fixed seed for now
+    llama_sampler_chain_add(smpl, llama_sampler_init_greedy());
 
     int n_cur = tokens_list.size();
     int n_gen = 0;

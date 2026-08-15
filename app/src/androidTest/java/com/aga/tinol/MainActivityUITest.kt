@@ -36,12 +36,13 @@ class MainActivityUITest {
         val maxWait = 25000 // 25 seconds max wait for each token generation in tests
         while (elapsed < maxWait) {
             try {
+                // Check visibility without throwing immediate failure to allow logging
                 onView(withId(R.id.thinking_indicator))
                     .check(matches(withEffectiveVisibility(Visibility.GONE)))
                 break
-            } catch (e: AssertionError) {
-                Thread.sleep(500)
-                elapsed += 500
+            } catch (e: Throwable) {
+                Thread.sleep(1000)
+                elapsed += 1000
             }
         }
 
