@@ -6,7 +6,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -19,7 +22,14 @@ import java.io.FileOutputStream
 class MainActivity : AppCompatActivity() {
     lateinit var chatAdapter: ChatAdapter
     private lateinit var thinkingIndicator: TextView
+    private lateinit var downloadLayout: LinearLayout
+    private lateinit var downloadStatus: TextView
+    private lateinit var downloadProgress: ProgressBar
+    private lateinit var btnDownload: Button
     private var modelCtx: Long = 0
+
+    private val MODEL_URL = "https://huggingface.co/prism-ml/Bonsai-1.7B-gguf/resolve/main/Bonsai-1.7B-Q1_0.gguf"
+    private val MODEL_NAME = "Bonsai-1.7B-Q1_0.gguf"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +50,15 @@ class MainActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
 
         thinkingIndicator = findViewById(R.id.thinking_indicator)
+        downloadLayout = findViewById(R.id.download_layout)
+        downloadStatus = findViewById(R.id.download_status)
+        downloadProgress = findViewById(R.id.download_progress)
+        btnDownload = findViewById(R.id.btn_download)
+
+        btnDownload.setOnClickListener {
+            startModelDownload()
+        }
+
         val messageInput = findViewById<EditText>(R.id.message_input)
         val sendButton = findViewById<MaterialButton>(R.id.send_button)
 
@@ -75,17 +94,38 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadModel() {
+        val modelFile = File(filesDir, MODEL_NAME)
+        if (!modelFile.exists()) {
+            // Check if model exists in assets (baked-in case)
+            try {
+                assets.open("models/$MODEL_NAME").use { input ->
+                    runOnUiThread { 
+                        thinkingIndicator.text = "Extracting model..."
+                        thinkingIndicator.visibility = View.VISIBLE 
+                    }
+                    FileOutputStream(modelFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            } catch (e: Exception) {
+                // Not in assets, need to download
+                runOnUiThread { downloadLayout.visibility = View.VISIBLE }
+                return
+            }
+        }
+
         runOnUiThread { 
             thinkingIndicator.text = "Loading model..."
             thinkingIndicator.visibility = View.VISIBLE 
+            downloadLayout.visibility = View.GONE
         }
+        
         Thread {
             try {
                 val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
                 val nCtx = prefs.getInt("context_size", 512)
                 val nBatch = prefs.getInt("batch_size", 256)
 
-                val modelFile = prepareModelFile()
                 modelCtx = BonsaiNative.loadModel(modelFile.absolutePath, 4, nCtx, nBatch)
                 
                 runOnUiThread {
@@ -105,16 +145,56 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
 
-    private fun prepareModelFile(): File {
-        val file = File(filesDir, "Bonsai-1.7B-Q1_0.gguf")
-        if (!file.exists()) {
-            assets.open("models/Bonsai-1.7B-Q1_0.gguf").use { input ->
-                FileOutputStream(file).use { output ->
-                    input.copyTo(output)
+    private fun startModelDownload() {
+        btnDownload.visibility = View.GONE
+        downloadProgress.visibility = View.VISIBLE
+        downloadStatus.text = "Starting download..."
+        
+        Thread {
+            try {
+                val url = java.net.URL(MODEL_URL)
+                val connection = url.openConnection() as java.net.HttpURLConnection
+                connection.connect()
+                
+                if (connection.responseCode != java.net.HttpURLConnection.HTTP_OK) {
+                    throw Exception("Server returned HTTP ${connection.responseCode}")
+                }
+                
+                val fileLength = connection.contentLength
+                val input = java.io.BufferedInputStream(url.openStream())
+                val output = FileOutputStream(File(filesDir, MODEL_NAME))
+                
+                val data = ByteArray(1024 * 8)
+                var total: Long = 0
+                var count: Int
+                while (input.read(data).also { count = it } != -1) {
+                    total += count.toLong()
+                    if (fileLength > 0) {
+                        val progress = (total * 100 / fileLength).toInt()
+                        runOnUiThread {
+                            downloadProgress.progress = progress
+                            downloadStatus.text = getString(R.string.downloading_model, progress)
+                        }
+                    }
+                    output.write(data, 0, count)
+                }
+                
+                output.flush()
+                output.close()
+                input.close()
+                
+                runOnUiThread {
+                    loadModel()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                runOnUiThread {
+                    btnDownload.visibility = View.VISIBLE
+                    downloadProgress.visibility = View.GONE
+                    downloadStatus.text = getString(R.string.download_failed)
                 }
             }
-        }
-        return file
+        }.start()
     }
 
     private fun generateResponse(userPrompt: String) {

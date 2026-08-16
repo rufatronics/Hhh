@@ -19,4 +19,8 @@
     <string name="device_limited">Limited Mode</string>
     <string name="limited_warning">Some settings are locked.</string>
     <string name="help_content">Tinol is an offline AI chat app powered by Bonsai 1.7B.</string>
+    <string name="download_model">Download AI Model</string>
+    <string name="downloading_model">Downloading model... %1$d%%</string>
+    <string name="download_failed">Download failed. Please check your connection.</string>
+    <string name="model_missing">AI Model missing. Please download to start chatting.</string>
 </resources>
