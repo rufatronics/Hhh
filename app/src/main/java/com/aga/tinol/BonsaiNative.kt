@@ -18,6 +18,7 @@ object BonsaiNative {
         maxTokens: Int,
         topP: Float,
         temp: Float,
+        topK: Int,
         callback: TokenCallback
     )
     external fun tokenToString(ctx: Long, tokenId: Int): String

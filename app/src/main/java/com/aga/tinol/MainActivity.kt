@@ -61,9 +61,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
-        if (item.itemId == R.id.action_settings) {
-            startActivity(Intent(this, SettingsActivity::class.java))
-            return true
+        when (item.itemId) {
+            R.id.action_settings -> {
+                startActivity(Intent(this, SettingsActivity::class.java))
+                return true
+            }
+            R.id.action_help -> {
+                startActivity(Intent(this, HelpActivity::class.java))
+                return true
+            }
         }
         return super.onOptionsItemSelected(item)
     }
@@ -111,24 +117,33 @@ class MainActivity : AppCompatActivity() {
         return file
     }
 
-    private fun generateResponse(prompt: String) {
+    private fun generateResponse(userPrompt: String) {
         Thread {
             if (modelCtx == 0L) return@Thread
 
             runOnUiThread { thinkingIndicator.visibility = View.VISIBLE }
 
-            val tokens = BonsaiNative.tokenize(modelCtx, prompt, true)
+            val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
+            val systemPrompt = prefs.getString("system_prompt", "You are a helpful AI assistant.") ?: ""
+            val temp = prefs.getFloat("temp", 0.8f)
+            val topP = prefs.getFloat("top_p", 0.95f)
+            val topK = prefs.getInt("top_k", 40)
+            
+            // Simple chat format: System Prompt + User Prompt
+            val fullPrompt = if (systemPrompt.isNotBlank()) {
+                "$systemPrompt\n\nUser: $userPrompt\nAssistant:"
+            } else {
+                "User: $userPrompt\nAssistant:"
+            }
+
+            val tokens = BonsaiNative.tokenize(modelCtx, fullPrompt, true)
             val responseBuilder = StringBuilder()
 
             runOnUiThread {
                 chatAdapter.addMessage(ChatMessage("", false))
             }
 
-            val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
-            val temp = prefs.getFloat("temp", 0.8f)
-            val topP = prefs.getFloat("top_p", 0.95f)
-
-            BonsaiNative.generate(modelCtx, tokens, 512, topP, temp, object : TokenCallback {
+            BonsaiNative.generate(modelCtx, tokens, 512, topP, temp, topK, object : TokenCallback {
                 override fun onToken(tokenId: Int): Boolean {
                     val word = BonsaiNative.tokenToString(modelCtx, tokenId)
                     responseBuilder.append(word)

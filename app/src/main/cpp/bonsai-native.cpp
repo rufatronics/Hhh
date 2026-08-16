@@ -95,7 +95,7 @@ Java_com_aga_tinol_BonsaiNative_tokenize(JNIEnv *env, jclass clazz, jlong handle
 
 JNIEXPORT void JNICALL
 Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle, jintArray input_tokens,
-                                         jint max_tokens, jfloat top_p, jfloat temp,
+                                         jint max_tokens, jfloat top_p, jfloat temp, jint top_k,
                                          jobject callback) {
     if (handle == 0) return;
     BonsaiContext * bctx = reinterpret_cast<BonsaiContext *>(handle);
@@ -140,10 +140,13 @@ Java_com_aga_tinol_BonsaiNative_generate(JNIEnv *env, jclass clazz, jlong handle
     }
     llama_batch_free(batch); // Free prompt batch after decode
 
-    // Set up sampling - use greedy for maximum stability during verification
+    // Set up sampling chain with user parameters
     llama_sampler_chain_params sparams = { .no_perf = true };
     struct llama_sampler * smpl = llama_sampler_chain_init(sparams);
-    llama_sampler_chain_add(smpl, llama_sampler_init_greedy());
+    llama_sampler_chain_add(smpl, llama_sampler_init_top_k(top_k));
+    llama_sampler_chain_add(smpl, llama_sampler_init_top_p(top_p, 1));
+    llama_sampler_chain_add(smpl, llama_sampler_init_temp(temp));
+    llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
 
     int n_cur = tokens_list.size();
     int n_gen = 0;

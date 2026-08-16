@@ -7,8 +7,16 @@
     <string name="settings">Settings</string>
     <string name="temp">Temperature</string>
     <string name="top_p">Top-P</string>
+    <string name="top_k">Top-K</string>
+    <string name="system_prompt">System Prompt</string>
     <string name="context_size">Context Size</string>
     <string name="batch_size">Batch Size</string>
-    <string name="save">Save</string>
+    <string name="save">Save Settings</string>
     <string name="thinking">Tinol is thinking...</string>
+    <string name="help">Help</string>
+    <string name="device_status">Device Capability</string>
+    <string name="device_powerful">High Performance Mode</string>
+    <string name="device_limited">Limited Mode</string>
+    <string name="limited_warning">Some settings are locked.</string>
+    <string name="help_content">Tinol is an offline AI chat app powered by Bonsai 1.7B.</string>
 </resources>
