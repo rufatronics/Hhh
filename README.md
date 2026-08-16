@@ -4,7 +4,8 @@ Tinol is a production-ready Android application that provides offline AI chat ca
 
 ## Features
 - **Offline Inference**: Powered by PrismML Llama.cpp and the Bonsai 1.7B (1-bit quantized) GGUF model.
-- **Low-Latency**: Optimized for arm64-v8a devices.
+- **Dual Distribution Modes**: Choose between a **Small APK** (15MB + in-app download) or a **Full APK** (250MB pre-baked).
+- **Low-Latency**: Optimized for arm64-v8a devices with 32-bit compatibility fixes.
 - **Privacy-First**: No data leaves the device; all processing is local.
 - **Wide Compatibility**: Supports Android devices from API Level 21 (Android 5.0) up to the latest versions.
 
@@ -15,18 +16,18 @@ Tinol is a production-ready Android application that provides offline AI chat ca
 - `.github/workflows/`: GitHub Actions for automated builds and releases.
 
 ## Local Build Instructions
-1. **Prerequisites**:
-   - Android Studio / Android SDK
-   - Android NDK (r25 LTS recommended)
-   - CMake 3.22+
-2. **Clone Native Runtime**:
-   ```bash
-   git clone --depth 1 -b prism https://github.com/PrismML-Eng/llama.cpp.git
-   ```
-3. **Download Model**:
-   Run `./scripts/download_model.sh` or manually download `Bonsai-1.7B-Q1_0.gguf` to `app/src/main/assets/models/`.
-4. **Build**:
-   Open the project in Android Studio and click "Build".
+
+Tinol supports two build modes. See [DISTRIBUTION.md](DISTRIBUTION.md) for full details.
+
+### Quick Start (Small APK)
+1.  **Prerequisites**: Android Studio, NDK (r25), CMake.
+2.  **Build**: Open in Android Studio and click **Build APK**.
+3.  **Run**: The app will prompt you to download the model on first launch.
+
+### Full Build (Model Pre-baked)
+1.  **Prepare**: Run `./scripts/prepare_full_build.sh` to download and place the model in assets.
+2.  **Build**: Open in Android Studio and click **Build APK**.
+3.  **Result**: A single ~250MB APK that works entirely offline from the start.
 
 ## CI/CD Pipeline
 The project includes a fully automated GitHub Actions pipeline that:
